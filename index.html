@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sad Slime Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;900&display=swap');
+
+        :root {
+            --tg-bg: var(--tg-theme-bg-color, #1a1a1a);
+            --tg-text: var(--tg-theme-text-color, #ffffff);
+            --tg-button: var(--tg-theme-button-color, #facc15);
+        }
+
+        body {
+            font-family: 'Unbounded', sans-serif;
+            background-color: var(--tg-bg);
+            color: var(--tg-text);
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .slime-gradient {
+            background: radial-gradient(circle at 50% 50%, rgba(250, 204, 21, 0.1) 0%, transparent 80%);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .active-tab-icon { color: #facc15; filter: drop-shadow(0 0 8px #facc15); }
+
+        .click-area {
+            transition: transform 0.05s ease;
+        }
+        .click-area:active { transform: scale(0.95); }
+
+        @keyframes float-up {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-120px); opacity: 0; }
+        }
+        .plus-one {
+            position: absolute;
+            pointer-events: none;
+            animation: float-up 0.7s ease-out forwards;
+            font-weight: 900;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- Верхняя панель -->
+    <header class="p-4 glass flex justify-between items-center z-20">
+        <div class="flex items-center gap-3">
+            <div id="u-avatar" class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-black font-black text-lg shadow-[0_0_15px_rgba(234,179,8,0.3)]">?</div>
+            <div>
+                <p id="u-name" class="text-xs font-black uppercase tracking-tight">Загрузка...</p>
+                <p class="text-[9px] text-yellow-500/70 font-bold uppercase tracking-widest">Sad Slime v1.0</p>
+            </div>
+        </div>
+        <div class="text-right">
+            <p id="slime-balance" class="text-2xl font-black text-yellow-400 leading-none">0</p>
+            <p class="text-[8px] text-white/30 uppercase mt-1 tracking-widest">Всего слизи</p>
+        </div>
+    </header>
+
+    <!-- Игровой контент -->
+    <main class="flex-1 relative overflow-hidden">
+        
+        <!-- ВКЛАДКА: ГЛАВНАЯ -->
+        <section id="tab-home" class="tab-pane flex flex-col items-center justify-center h-full p-6 slime-gradient">
+            <div class="mb-10 text-center">
+                <p id="auto-val" class="text-[10px] text-white/50 font-bold uppercase tracking-[0.3em]">Доход: 0/сек</p>
+            </div>
+
+            <div id="main-clicker" class="click-area relative">
+                <div class="absolute inset-0 bg-yellow-500/5 blur-[80px] rounded-full scale-150"></div>
+                <!-- Используем картинку с fallback на эмодзи -->
+                <img src="image_4e76c0.jpg" alt="Slime" id="slime-img" 
+                     class="w-64 h-64 md:w-80 md:h-80 object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-10 relative"
+                     onerror="this.style.display='none'; document.getElementById('emoji-fallback').style.display='block';">
+                <div id="emoji-fallback" class="hidden text-[120px] z-10 relative">🤢</div>
+            </div>
+
+            <div class="mt-12 glass px-6 py-3 rounded-2xl flex items-center gap-4">
+                <div class="text-center">
+                    <p class="text-[8px] text-white/40 uppercase">За клик</p>
+                    <p id="click-val" class="font-black text-yellow-500 text-sm">+1</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ВКЛАДКА: МАГАЗИН -->
+        <section id="tab-shop" class="tab-pane hidden h-full overflow-y-auto p-5 pb-24">
+            <h2 class="text-xl font-black mb-6 flex items-center gap-3">
+                <span class="bg-yellow-500 text-black p-1 rounded">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                </span>
+                УЛУЧШЕНИЯ
+            </h2>
+            <div id="shop-list" class="space-y-3"></div>
+        </section>
+
+    </main>
+
+    <!-- Навигация -->
+    <nav class="glass p-5 pb-10 flex justify-around items-center border-t border-white/5 z-30">
+        <button onclick="showTab('home')" id="nav-home" class="flex flex-col items-center gap-1 active-tab-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="text-[9px] font-black uppercase">Игра</span>
+        </button>
+        <button onclick="showTab('shop')" id="nav-shop" class="flex flex-col items-center gap-1 opacity-40">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <span class="text-[9px] font-black uppercase">Магазин</span>
+        </button>
+    </nav>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.enableClosingConfirmation();
+
+        let state = {
+            balance: 0,
+            clickPower: 1,
+            autoRate: 0,
+            levels: { s1: 0, s2: 0, s3: 0, s4: 0 }
+        };
+
+        const shopConfig = [
+            { id: 's1', name: 'Липкая рука', desc: 'Сила клика +1', price: 15, grow: 1.25, type: 'click', val: 1 },
+            { id: 's2', name: 'Капельница', desc: 'Авто-слизь +1/сек', price: 60, grow: 1.3, type: 'auto', val: 1 },
+            { id: 's3', name: 'Огурец-друг', desc: 'Авто-слизь +8/сек', price: 450, grow: 1.35, type: 'auto', val: 8 },
+            { id: 's4', name: 'Завод грусти', desc: 'Авто-слизь +45/сек', price: 2500, grow: 1.4, type: 'auto', val: 45 }
+        ];
+
+        // Инициализация профиля TG
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            document.getElementById('u-name').innerText = user.first_name;
+            document.getElementById('u-avatar').innerText = user.first_name[0].toUpperCase();
+        }
+
+        function save() { localStorage.setItem('sad_slime_v1', JSON.stringify(state)); }
+        function load() {
+            const data = localStorage.getItem('sad_slime_v1');
+            if (data) state = JSON.parse(data);
+        }
+
+        function format(n) {
+            if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+            if (n >= 1000) return (n/1000).toFixed(1) + 'k';
+            return Math.floor(n);
+        }
+
+        function updateUI() {
+            document.getElementById('slime-balance').innerText = format(state.balance);
+            document.getElementById('auto-val').innerText = `Доход: ${format(state.autoRate)}/сек`;
+            document.getElementById('click-val').innerText = `+${state.clickPower}`;
+            
+            shopConfig.forEach(item => {
+                const price = Math.floor(item.price * Math.pow(item.grow, state.levels[item.id]));
+                const card = document.getElementById(`card-${item.id}`);
+                if (card) {
+                    document.getElementById(`price-${item.id}`).innerText = format(price);
+                    document.getElementById(`lvl-${item.id}`).innerText = `LVL ${state.levels[item.id]}`;
+                    if (state.balance >= price) card.classList.remove('opacity-40');
+                    else card.classList.add('opacity-40');
+                }
+            });
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(b => b.classList.add('opacity-40', 'active-tab-icon'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab-icon'));
+            document.getElementById(`nav-${tab}`).classList.remove('opacity-40');
+            document.getElementById(`nav-${tab}`).classList.add('active-tab-icon');
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        function buildShop() {
+            const list = document.getElementById('shop-list');
+            list.innerHTML = '';
+            shopConfig.forEach(item => {
+                const div = document.createElement('div');
+                div.id = `card-${item.id}`;
+                div.className = `glass p-4 rounded-3xl flex items-center justify-between transition-opacity active:scale-95`;
+                div.onclick = () => {
+                    const price = Math.floor(item.price * Math.pow(item.grow, state.levels[item.id]));
+                    if (state.balance >= price) {
+                        state.balance -= price;
+                        state.levels[item.id]++;
+                        if (item.type === 'click') state.clickPower += item.val;
+                        else state.autoRate += item.val;
+                        tg.HapticFeedback.notificationOccurred('success');
+                        updateUI();
+                        save();
+                    } else {
+                        tg.HapticFeedback.notificationOccurred('error');
+                    }
+                };
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <p class="font-black text-xs uppercase mb-1">${item.name}</p>
+                        <p class="text-[9px] text-white/40">${item.desc}</p>
+                        <p id="lvl-${item.id}" class="text-[8px] font-bold text-yellow-500 mt-1">LVL 0</p>
+                    </div>
+                    <div class="text-right">
+                        <p id="price-${item.id}" class="text-sm font-black text-yellow-400">0</p>
+                        <p class="text-[7px] uppercase opacity-30">Слизь</p>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        document.getElementById('main-clicker').onclick = (e) => {
+            state.balance += state.clickPower;
+            tg.HapticFeedback.impactOccurred('medium');
+            
+            const p = document.createElement('div');
+            p.className = 'plus-one text-yellow-400 text-2xl';
+            p.style.left = `${e.clientX}px`;
+            p.style.top = `${e.clientY}px`;
+            p.innerText = `+${state.clickPower}`;
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 700);
+            
+            updateUI();
+        };
+
+        setInterval(() => {
+            if (state.autoRate > 0) {
+                state.balance += state.autoRate / 10;
+                updateUI();
+            }
+        }, 100);
+
+        setInterval(save, 5000);
+
+        load();
+        buildShop();
+        updateUI();
+    </script>
+</body>
+</html>
