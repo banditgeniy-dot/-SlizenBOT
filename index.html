@@ -1,0 +1,72 @@
+import telebot
+from telebot import types
+
+# --- НАСТРОЙКИ ---
+# Токен вашего бота из @BotFather
+API_TOKEN = '7980360709:AAGmJe0Bj1JtL2QSzyMbBrFWmMWtEc5Otqo'
+
+# Юзернейм новостного канала (обязательно с @)
+CHANNEL_ID = '@SlizenTapTapNews' 
+
+# Ссылка на вашу игру, загруженную на GitHub Pages
+MINI_APP_URL = 'https://banditgeniy-dot.github.io/-SlizenBOT/'
+
+bot = telebot.TeleBot(API_TOKEN)
+
+def is_subscribed(user_id):
+    """Проверяет, подписан ли пользователь на канал."""
+    try:
+        member = bot.get_chat_member(CHANNEL_ID, user_id)
+        print(f"[DEBUG] Статус пользователя {user_id}: {member.status}")
+        if member.status in ['member', 'administrator', 'creator']:
+            return True
+        return False
+    except Exception as e:
+        print(f"[ERROR] Ошибка проверки подписки: {e}")
+        return False
+
+@bot.message_handler(commands=['start'])
+def start_handler(message):
+    user_id = message.from_user.id
+    first_name = message.from_user.first_name
+    
+    print(f"[INFO] Нажата кнопка СТАРТ пользователем {first_name}")
+
+    if is_subscribed(user_id):
+        # Если подписан — даем кнопку игры
+        markup = types.InlineKeyboardMarkup()
+        web_app = types.WebAppInfo(MINI_APP_URL)
+        btn_play = types.InlineKeyboardButton('Играть в Слизня 💧', web_app=web_app)
+        markup.add(btn_play)
+        
+        bot.send_message(
+            message.chat.id,
+            f"Привет, {first_name}! Проверка пройдена. Жми на кнопку, чтобы начать!",
+            reply_markup=markup
+        )
+    else:
+        # Если не подписан — требуем подписку
+        markup = types.InlineKeyboardMarkup()
+        btn_channel = types.InlineKeyboardButton('Подписаться на Новости 📢', url=f"https://t.me/SlizenTapTapNews")
+        btn_check = types.InlineKeyboardButton('Я подписался ✅', callback_data='verify_sub')
+        markup.add(btn_channel)
+        markup.add(btn_check)
+        
+        bot.send_message(
+            message.chat.id,
+            f"Привет, {first_name}! Чтобы войти в игру, нужно подписаться на наш новостной канал.",
+            reply_markup=markup
+        )
+
+@bot.callback_query_handler(func=lambda call: call.data == 'verify_sub')
+def callback_verify(call):
+    if is_subscribed(call.from_user.id):
+        bot.answer_callback_query(call.id, "Доступ разрешен! ✅")
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        start_handler(call)
+    else:
+        bot.answer_callback_query(call.id, "Вы еще не подписались! ❌", show_alert=True)
+
+if __name__ == '__main__':
+    print("--- Бот SlizenTapBOT запущен ---")
+    bot.polling(none_stop=True)
