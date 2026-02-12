@@ -1,72 +1,165 @@
-import telebot
-from telebot import types
-
-# --- НАСТРОЙКИ ---
-# Токен вашего бота из @BotFather
-API_TOKEN = '7980360709:AAGmJe0Bj1JtL2QSzyMbBrFWmMWtEc5Otqo'
-
-# Юзернейм новостного канала (обязательно с @)
-CHANNEL_ID = '@SlizenTapTapNews' 
-
-# Ссылка на вашу игру, загруженную на GitHub Pages
-MINI_APP_URL = 'https://banditgeniy-dot.github.io/-SlizenBOT/'
-
-bot = telebot.TeleBot(API_TOKEN)
-
-def is_subscribed(user_id):
-    """Проверяет, подписан ли пользователь на канал."""
-    try:
-        member = bot.get_chat_member(CHANNEL_ID, user_id)
-        print(f"[DEBUG] Статус пользователя {user_id}: {member.status}")
-        if member.status in ['member', 'administrator', 'creator']:
-            return True
-        return False
-    except Exception as e:
-        print(f"[ERROR] Ошибка проверки подписки: {e}")
-        return False
-
-@bot.message_handler(commands=['start'])
-def start_handler(message):
-    user_id = message.from_user.id
-    first_name = message.from_user.first_name
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sad Slime: Pro Edition</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    print(f"[INFO] Нажата кнопка СТАРТ пользователем {first_name}")
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;900&display=swap');
+        :root { --tg-bg: var(--tg-theme-bg-color, #1a1a1a); --tg-text: var(--tg-theme-text-color, #ffffff); --accent: #facc15; }
+        body { font-family: 'Unbounded', sans-serif; background-color: var(--tg-bg); color: var(--tg-text); margin: 0; padding: 0; overflow: hidden; touch-action: manipulation; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .active-tab { color: var(--accent); filter: drop-shadow(0 0 8px var(--accent)); opacity: 1 !important; }
+        .tab-pane { display: none; height: 100%; overflow-y: auto; padding-bottom: 120px; }
+        .tab-pane.active { display: block; }
+        .main-photo { width: 80vw; height: 80vw; max-width: 350px; object-fit: contain; filter: drop-shadow(0 0 20px rgba(250, 204, 21, 0.2)); transition: all 0.3s ease; }
+        @keyframes float-up { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100px); opacity: 0; } }
+        .plus-one { position: absolute; pointer-events: none; animation: float-up 0.6s ease-out forwards; font-weight: 900; color: var(--accent); z-index: 100; }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
 
-    if is_subscribed(user_id):
-        # Если подписан — даем кнопку игры
-        markup = types.InlineKeyboardMarkup()
-        web_app = types.WebAppInfo(MINI_APP_URL)
-        btn_play = types.InlineKeyboardButton('Играть в Слизня 💧', web_app=web_app)
-        markup.add(btn_play)
+    <!-- Шапка профиля -->
+    <header class="p-4 glass flex justify-between items-center z-20">
+        <div class="flex items-center gap-3">
+            <div id="u-avatar" class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-black font-black">?</div>
+            <div>
+                <p id="u-name" class="text-[10px] font-black uppercase">Загрузка...</p>
+                <div class="flex items-center gap-2">
+                    <p id="u-level-label" class="text-[8px] text-yellow-500 font-bold uppercase">УР. 1</p>
+                    <p id="u-status" class="text-[8px] text-white/30 uppercase">Локально</p>
+                </div>
+            </div>
+        </div>
+        <div class="text-right">
+            <p id="balance-display" class="text-2xl font-black text-yellow-400">0</p>
+            <p class="text-[7px] text-white/20 uppercase tracking-widest">Слизь</p>
+        </div>
+    </header>
+
+    <main class="flex-1 relative">
+        <!-- ГЛАВНАЯ СТРАНИЦА -->
+        <section id="pane-home" class="tab-pane active flex flex-col items-center justify-center p-6">
+            <p id="ps-display" class="text-[10px] text-yellow-500 font-bold mb-6 uppercase tracking-widest">0 / СЕК</p>
+            <div id="clicker" class="relative active:scale-90 transition-transform cursor-pointer">
+                <img id="slime-image-main" src="image_5040bb.jpg" alt="Slime" class="main-photo" onerror="this.src='https://via.placeholder.com/350?text=NO+IMAGE'">
+            </div>
+            <div class="mt-8 glass px-6 py-2 rounded-full">
+                <p id="pc-display" class="font-black text-yellow-500 text-lg tracking-tighter">+1</p>
+            </div>
+        </section>
+
+        <!-- МАГАЗИН -->
+        <section id="pane-shop" class="tab-pane p-6">
+            <h2 class="text-lg font-black mb-6 uppercase">Цех улучшений</h2>
+            <div id="shop-list" class="space-y-3"></div>
+        </section>
+    </main>
+
+    <!-- Навигация -->
+    <nav class="glass p-5 pb-10 flex justify-around items-center border-t border-white/5 z-30">
+        <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 active-tab">
+            <span>💧</span><span class="text-[8px] font-black uppercase mt-1">Игра</span>
+        </button>
+        <button onclick="switchTab('shop')" id="nav-shop" class="flex flex-col items-center gap-1 opacity-40">
+            <span>🏪</span><span class="text-[8px] font-black uppercase mt-1">Цех</span>
+        </button>
+    </nav>
+
+    <script type="module">
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Карта картинок для уровней
+        const levelImages = { 1: 'image_5040bb.jpg', 2: 'image_4e76c0.jpg' };
         
-        bot.send_message(
-            message.chat.id,
-            f"Привет, {first_name}! Проверка пройдена. Жми на кнопку, чтобы начать!",
-            reply_markup=markup
-        )
-    else:
-        # Если не подписан — требуем подписку
-        markup = types.InlineKeyboardMarkup()
-        btn_channel = types.InlineKeyboardButton('Подписаться на Новости 📢', url=f"https://t.me/SlizenTapTapNews")
-        btn_check = types.InlineKeyboardButton('Я подписался ✅', callback_data='verify_sub')
-        markup.add(btn_channel)
-        markup.add(btn_check)
+        let state = {
+            balance: 0, clickPower: 1, autoRate: 0, visualLevel: 1,
+            levels: { s1: 0, s2: 0, s3: 0, s4: 0, evol: 0 },
+            userId: tg.initDataUnsafe?.user?.id || "guest",
+            userName: tg.initDataUnsafe?.user?.first_name || "Игрок"
+        };
+
+        const shopConfig = [
+            { id: 'evol', name: 'Эволюция', desc: 'Сменить облик слизня', price: 1000, grow: 5, type: 'visual', val: 1 },
+            { id: 's1', name: 'Липкая рука', desc: 'Клик +1', price: 15, grow: 1.25, type: 'click', val: 1 },
+            { id: 's2', name: 'Капельница', desc: 'Авто-сбор +1/сек', price: 60, grow: 1.3, type: 'auto', val: 1 },
+            { id: 's3', name: 'Друг-слизень', desc: 'Помощник +10/сек', price: 500, grow: 1.35, type: 'auto', val: 10 }
+        ];
+
+        function updateUI() {
+            document.getElementById('balance-display').innerText = Math.floor(state.balance).toLocaleString();
+            document.getElementById('ps-display').innerText = `${state.autoRate} / СЕК`;
+            document.getElementById('pc-display').innerText = `+${state.clickPower}`;
+            document.getElementById('u-level-label').innerText = `УР. ${state.visualLevel}`;
+            document.getElementById('slime-image-main').src = levelImages[state.visualLevel] || levelImages[1];
+            
+            shopConfig.forEach(item => {
+                const price = Math.floor(item.price * Math.pow(item.grow, state.levels[item.id] || 0));
+                const card = document.getElementById(`card-${item.id}`);
+                if (card) {
+                    document.getElementById(`price-${item.id}`).innerText = price.toLocaleString();
+                    card.style.opacity = state.balance >= price ? "1" : "0.4";
+                }
+            });
+        }
+
+        window.buy = (id) => {
+            const item = shopConfig.find(i => i.id === id);
+            const price = Math.floor(item.price * Math.pow(item.grow, state.levels[id] || 0));
+            if (state.balance >= price) {
+                state.balance -= price;
+                state.levels[id] = (state.levels[id] || 0) + 1;
+                if (item.type === 'click') state.clickPower += item.val;
+                else if (item.type === 'auto') state.autoRate += item.val;
+                else if (item.type === 'visual') state.visualLevel = state.visualLevel === 1 ? 2 : 1;
+                tg.HapticFeedback.notificationOccurred('success');
+                updateUI();
+                localStorage.setItem('slime_save', JSON.stringify(state));
+            }
+        };
+
+        window.switchTab = (tab) => {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.getElementById(`pane-${tab}`).classList.add('active');
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab'));
+            document.getElementById(`nav-${tab}`).classList.add('active-tab');
+        };
+
+        document.getElementById('clicker').onclick = (e) => {
+            state.balance += state.clickPower;
+            tg.HapticFeedback.impactOccurred('medium');
+            const p = document.createElement('div');
+            p.className = 'plus-one';
+            p.style.left = `${e.clientX}px`; p.style.top = `${e.clientY}px`;
+            p.innerText = `+${state.clickPower}`;
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 600);
+            updateUI();
+        };
+
+        // Старт
+        const saved = localStorage.getItem('slime_save');
+        if (saved) Object.assign(state, JSON.parse(saved));
         
-        bot.send_message(
-            message.chat.id,
-            f"Привет, {first_name}! Чтобы войти в игру, нужно подписаться на наш новостной канал.",
-            reply_markup=markup
-        )
+        document.getElementById('u-name').innerText = state.userName;
+        document.getElementById('u-avatar').innerText = (state.userName[0] || "?").toUpperCase();
 
-@bot.callback_query_handler(func=lambda call: call.data == 'verify_sub')
-def callback_verify(call):
-    if is_subscribed(call.from_user.id):
-        bot.answer_callback_query(call.id, "Доступ разрешен! ✅")
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-        start_handler(call)
-    else:
-        bot.answer_callback_query(call.id, "Вы еще не подписались! ❌", show_alert=True)
-
-if __name__ == '__main__':
-    print("--- Бот SlizenTapBOT запущен ---")
-    bot.polling(none_stop=True)
+        const shop = document.getElementById('shop-list');
+        shopConfig.forEach(item => {
+            const div = document.createElement('div');
+            div.id = `card-${item.id}`;
+            div.className = `glass p-4 rounded-3xl flex justify-between items-center cursor-pointer transition-all active:scale-95`;
+            div.onclick = () => window.buy(item.id);
+            div.innerHTML = `<div><p class="text-xs font-black uppercase">${item.name}</p><p class="text-[8px] opacity-30">${item.desc}</p></div>
+                             <div class="text-right"><p id="price-${item.id}" class="text-yellow-400 font-black">0</p></div>`;
+            shop.appendChild(div);
+        });
+        updateUI();
+        setInterval(() => { if (state.autoRate > 0) { state.balance += state.autoRate / 10; updateUI(); } }, 100);
+    </script>
+</body>
+</html>
